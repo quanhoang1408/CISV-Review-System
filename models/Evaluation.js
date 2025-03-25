@@ -26,7 +26,7 @@ const evaluationSchema = new mongoose.Schema({
       },
       evidence: {
         type: String,
-        required: true
+        default: "" // Thay thế required bằng default
       }
     }
   ],

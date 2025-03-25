@@ -1,7 +1,5 @@
 // config/cloudinary.js
 const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer = require('multer');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -9,15 +7,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'checkin-app',
-    format: async (req, file) => 'png',
-    public_id: (req, file) => `user-${Date.now()}`
-  }
-});
+// Simple function to verify config is loaded correctly
+const verifyConfig = () => {
+  console.log('Cloudinary Configuration:');
+  console.log('- Cloud name:', process.env.CLOUDINARY_CLOUD_NAME ? 'Set ✓' : 'Missing ✗');
+  console.log('- API key:', process.env.CLOUDINARY_API_KEY ? 'Set ✓' : 'Missing ✗');
+  console.log('- API secret:', process.env.CLOUDINARY_API_SECRET ? 'Set ✓' : 'Missing ✗');
+};
 
-const upload = multer({ storage: storage });
+// Call this when server starts
+verifyConfig();
 
-module.exports = { cloudinary, upload };
+module.exports = { cloudinary };
