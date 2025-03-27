@@ -15,6 +15,10 @@ const participantSchema = new mongoose.Schema({
   },
   checkInPhoto: {
     type: String
+  },
+  checkedInBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 });
 

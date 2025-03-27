@@ -39,7 +39,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Middleware
 app.use(cors({
     origin: [
-      'https://cisv-review-system-ui.vercel.app'
+      'https://cisv-review-system-ui.vercel.app',
+      'http://localhost:3000'
     ],
     credentials: true
   }));

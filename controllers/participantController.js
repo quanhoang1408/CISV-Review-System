@@ -6,12 +6,13 @@ const Participant = require('../models/Participant');
 // @access  Public
 const getParticipants = async (req, res) => {
   try {
-    const participants = await Participant.find();
+    const participants = await Participant.find().populate('checkedInBy', 'name');
     res.json(participants);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // @desc    Create a participant
 // @route   POST /api/participants
@@ -36,7 +37,7 @@ const createParticipant = async (req, res) => {
 // @access  Public
 const checkInParticipant = async (req, res) => {
   try {
-    const { checkInStatus, checkInTime, checkInPhoto } = req.body;
+    const { checkInStatus, checkInTime, checkInPhoto, checkedInBy } = req.body;
     
     const participant = await Participant.findById(req.params.id);
     
@@ -47,9 +48,15 @@ const checkInParticipant = async (req, res) => {
     participant.checkInStatus = checkInStatus;
     participant.checkInTime = checkInTime;
     participant.checkInPhoto = checkInPhoto;
+    participant.checkedInBy = checkedInBy;
     
     const updatedParticipant = await participant.save();
-    res.json(updatedParticipant);
+    
+    // Populate checkedInBy để trả về tên admin
+    const populatedParticipant = await Participant.findById(updatedParticipant._id)
+      .populate('checkedInBy', 'name');
+      
+    res.json(populatedParticipant);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

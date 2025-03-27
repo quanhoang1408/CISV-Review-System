@@ -12,7 +12,7 @@ mongoose.connect(process.env.MONGODB_URI);
 // Sample data
 const users = [
   { name: 'Admin 1', role: 'admin' },
-  { name: 'Admin 2', role: 'admin' }
+  { name: 'Admin 3', role: 'admin' }
 ];
 
 const participants = [
