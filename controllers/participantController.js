@@ -19,10 +19,11 @@ const getParticipants = async (req, res) => {
 // @access  Public
 const createParticipant = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, type } = req.body;
     
     const participant = new Participant({
-      name
+      name,
+      type: type || 'supporter'
     });
     
     const savedParticipant = await participant.save();
