@@ -24,6 +24,7 @@ const userRoutes = require('./routes/userRoutes');
 const participantRoutes = require('./routes/participantRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const campAssignmentRoutes = require('./routes/campAssignmentRoutes');
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/api/users', userRoutes);
 app.use('/api/participants', participantRoutes);
 app.use('/api/evaluations', evaluationRoutes);
+app.use('/api/camp-assignments', campAssignmentRoutes);
 
 // Simplified upload routes - just use one path for all upload-related endpoints
 app.use('/api/upload-photo', uploadRoutes);
