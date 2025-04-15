@@ -17,6 +17,10 @@ const campAssignmentSchema = new mongoose.Schema({
     enum: ['leader', 'supporter'],
     required: true
   },
+  order: {
+    type: Number,
+    default: 0 // Vị trí mặc định
+  },
   createdAt: {
     type: Date,
     default: Date.now
