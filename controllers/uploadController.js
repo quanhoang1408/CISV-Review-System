@@ -9,24 +9,36 @@ const uploadPhoto = async (req, res) => {
   try {
     console.log('Received base64 upload request');
     const fileStr = req.body.photo;
-    
+
     if (!fileStr) {
       return res.status(400).json({ message: 'No image data provided in request body' });
     }
-    
+
     console.log('Uploading base64 image to Cloudinary...');
-    
+
     const uploadResponse = await cloudinary.uploader.upload(fileStr, {
       folder: 'checkin-app',
-      resource_type: 'auto'
+      resource_type: 'auto',
+      // Tối ưu hóa ảnh
+      quality: 'auto', // Tự động tối ưu chất lượng
+      fetch_format: 'auto', // Tự động chọn định dạng tốt nhất (WebP, AVIF, v.v.)
+      width: 800, // Giới hạn chiều rộng tối đa
+      height: 800, // Giới hạn chiều cao tối đa
+      crop: 'limit', // Chỉ thay đổi kích thước nếu ảnh lớn hơn giới hạn
+      eager: [
+        // Tạo phiên bản thumbnail để sử dụng trong danh sách
+        { width: 200, height: 200, crop: 'fill', gravity: 'face' }
+      ],
+      eager_async: true, // Xử lý các biến thể ảnh không đồng bộ
+      format: 'jpg' // Chuyển đổi tất cả ảnh sang jpg để đảm bảo tính tương thích
     });
-    
+
     console.log('Base64 upload successful:', uploadResponse.secure_url);
     res.json({ url: uploadResponse.secure_url });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ 
-      message: 'Upload failed', 
+    res.status(500).json({
+      message: 'Upload failed',
       error: error.message
     });
   }
@@ -39,12 +51,12 @@ const uploadPhotoFile = async (req, res) => {
   try {
     console.log('Received file upload request');
     console.log('req.file:', req.file);
-    
+
     // Check if file was received
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded or file field is not named "photo"' });
     }
-    
+
     console.log('File details:', {
       fieldname: req.file.fieldname,
       originalname: req.file.originalname,
@@ -52,7 +64,7 @@ const uploadPhotoFile = async (req, res) => {
       path: req.file.path,
       size: req.file.size
     });
-    
+
     try {
       // Check if file exists at the path
       fs.accessSync(req.file.path, fs.constants.F_OK);
@@ -61,47 +73,59 @@ const uploadPhotoFile = async (req, res) => {
       console.error('File not found at path:', req.file.path);
       return res.status(400).json({ message: 'File not found at path: ' + req.file.path });
     }
-    
+
     console.log('Uploading file to Cloudinary...');
-    
+
     // Upload to Cloudinary using streams to avoid "missing file" errors
     const stream = fs.createReadStream(req.file.path);
-    
+
     const uploadPromise = new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: 'checkin-app',
-          resource_type: 'auto'
+          resource_type: 'auto',
+          // Tối ưu hóa ảnh
+          quality: 'auto', // Tự động tối ưu chất lượng
+          fetch_format: 'auto', // Tự động chọn định dạng tốt nhất (WebP, AVIF, v.v.)
+          width: 800, // Giới hạn chiều rộng tối đa
+          height: 800, // Giới hạn chiều cao tối đa
+          crop: 'limit', // Chỉ thay đổi kích thước nếu ảnh lớn hơn giới hạn
+          eager: [
+            // Tạo phiên bản thumbnail để sử dụng trong danh sách
+            { width: 200, height: 200, crop: 'fill', gravity: 'face' }
+          ],
+          eager_async: true, // Xử lý các biến thể ảnh không đồng bộ
+          format: 'jpg' // Chuyển đổi tất cả ảnh sang jpg để đảm bảo tính tương thích
         },
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
         }
       );
-      
+
       stream.pipe(uploadStream);
     });
-    
+
     const result = await uploadPromise;
-    
+
     console.log('File upload successful:', result.secure_url);
-    
+
     // Clean up the temporary file
     fs.unlink(req.file.path, (err) => {
       if (err) console.error('Error deleting temp file:', err);
       else console.log('Temporary file deleted');
     });
-    
+
     res.json({ url: result.secure_url });
   } catch (error) {
     console.error('Upload error details:', error);
-    
+
     // Clean up temp file if it exists
     if (req.file && req.file.path) {
       fs.unlink(req.file.path, () => {});
     }
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       message: `Upload failed: ${error.message}`,
       details: error
     });

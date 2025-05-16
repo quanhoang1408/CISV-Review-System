@@ -21,12 +21,12 @@ const getParticipants = async (req, res) => {
 const createParticipant = async (req, res) => {
   try {
     const { name, type } = req.body;
-    
+
     const participant = new Participant({
       name,
       type: type || 'supporter'
     });
-    
+
     const savedParticipant = await participant.save();
     res.status(201).json(savedParticipant);
   } catch (error) {
@@ -40,24 +40,24 @@ const createParticipant = async (req, res) => {
 const checkInParticipant = async (req, res) => {
   try {
     const { checkInStatus, checkInTime, checkInPhoto, checkedInBy } = req.body;
-    
+
     const participant = await Participant.findById(req.params.id);
-    
+
     if (!participant) {
       return res.status(404).json({ message: 'Participant not found' });
     }
-    
+
     participant.checkInStatus = checkInStatus;
     participant.checkInTime = checkInTime;
     participant.checkInPhoto = checkInPhoto;
     participant.checkedInBy = checkedInBy;
-    
+
     const updatedParticipant = await participant.save();
-    
+
     // Populate checkedInBy để trả về tên admin
     const populatedParticipant = await Participant.findById(updatedParticipant._id)
       .populate('checkedInBy', 'name');
-      
+
     res.json(populatedParticipant);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -70,11 +70,11 @@ const checkInParticipant = async (req, res) => {
 const resetCheckIn = async (req, res) => {
   try {
     const participant = await Participant.findById(req.params.id);
-    
+
     if (!participant) {
       return res.status(404).json({ message: 'Participant not found' });
     }
-    
+
     // If there's a photo URL, extract the public ID and delete from Cloudinary
     if (participant.checkInPhoto) {
       try {
@@ -83,9 +83,9 @@ const resetCheckIn = async (req, res) => {
         const urlParts = participant.checkInPhoto.split('/');
         const filenameWithExtension = urlParts[urlParts.length - 1]; // Get the filename with extension
         const publicIdWithFolder = urlParts[urlParts.length - 2] + '/' + filenameWithExtension.split('.')[0]; // Get folder/filename without extension
-        
+
         console.log(`Attempting to delete image with public ID: ${publicIdWithFolder}`);
-        
+
         // Delete the image from Cloudinary
         await cloudinary.uploader.destroy(publicIdWithFolder);
         console.log('Image deleted from Cloudinary');
@@ -94,15 +94,15 @@ const resetCheckIn = async (req, res) => {
         // Continue with check-in reset even if image deletion fails
       }
     }
-    
+
     // Reset check-in fields
     participant.checkInStatus = false;
     participant.checkInTime = null;
     participant.checkInPhoto = null;
     participant.checkedInBy = null;
-    
+
     const updatedParticipant = await participant.save();
-    
+
     res.json({
       success: true,
       message: 'Check-in reset successfully',
@@ -120,23 +120,89 @@ const resetCheckIn = async (req, res) => {
 const findParticipantByName = async (req, res) => {
   try {
     const { name } = req.query;
-    
+
     if (!name) {
       return res.status(400).json({ message: 'Name parameter is required' });
     }
-    
+
     // Find participants whose name contains the search string (case insensitive)
     const participants = await Participant.find({
       name: { $regex: name, $options: 'i' }
     }).populate('checkedInBy', 'name');
-    
+
     if (participants.length === 0) {
       return res.status(404).json({ message: 'No participants found with that name' });
     }
-    
+
     res.json(participants);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Delete a participant
+// @route   DELETE /api/participants/:id
+// @access  Public
+const deleteParticipant = async (req, res) => {
+  try {
+    const participant = await Participant.findById(req.params.id);
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    // If there's a photo URL, extract the public ID and delete from Cloudinary
+    if (participant.checkInPhoto) {
+      try {
+        // Extract public ID from the URL
+        const urlParts = participant.checkInPhoto.split('/');
+        const filenameWithExtension = urlParts[urlParts.length - 1];
+        const publicIdWithFolder = urlParts[urlParts.length - 2] + '/' + filenameWithExtension.split('.')[0];
+
+        // Delete the image from Cloudinary
+        await cloudinary.uploader.destroy(publicIdWithFolder);
+        console.log(`Deleted image from Cloudinary: ${publicIdWithFolder}`);
+      } catch (cloudinaryError) {
+        console.error('Error deleting image from Cloudinary:', cloudinaryError);
+        // Continue with participant deletion even if image deletion fails
+      }
+    }
+
+    // Delete the participant
+    await Participant.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Participant deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete participant error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Update a participant
+// @route   PUT /api/participants/:id
+// @access  Public
+const updateParticipant = async (req, res) => {
+  try {
+    const { name, type } = req.body;
+
+    const participant = await Participant.findById(req.params.id);
+
+    if (!participant) {
+      return res.status(404).json({ message: 'Participant not found' });
+    }
+
+    // Update fields
+    if (name) participant.name = name;
+    if (type) participant.type = type;
+
+    const updatedParticipant = await participant.save();
+
+    res.json(updatedParticipant);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -145,5 +211,7 @@ module.exports = {
   createParticipant,
   checkInParticipant,
   resetCheckIn,
-  findParticipantByName
+  findParticipantByName,
+  deleteParticipant,
+  updateParticipant
 };
