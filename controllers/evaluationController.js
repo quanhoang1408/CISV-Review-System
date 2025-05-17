@@ -20,13 +20,13 @@ const getEvaluationsByParticipant = async (req, res) => {
 const createEvaluation = async (req, res) => {
   try {
     const { participantId, evaluatorId, criteria } = req.body;
-    
+
     const evaluation = new Evaluation({
       participantId,
       evaluatorId,
       criteria
     });
-    
+
     const savedEvaluation = await evaluation.save();
     res.status(201).json(savedEvaluation);
   } catch (error) {
@@ -34,7 +34,32 @@ const createEvaluation = async (req, res) => {
   }
 };
 
+// @desc    Delete an evaluation
+// @route   DELETE /api/evaluations/:id
+// @access  Public (should be restricted to super admin in frontend)
+const deleteEvaluation = async (req, res) => {
+  try {
+    const evaluation = await Evaluation.findById(req.params.id);
+
+    if (!evaluation) {
+      return res.status(404).json({ message: 'Đánh giá không tồn tại' });
+    }
+
+    await Evaluation.findByIdAndDelete(req.params.id);
+
+    res.json({
+      success: true,
+      message: 'Đã xóa đánh giá thành công',
+      evaluationId: req.params.id
+    });
+  } catch (error) {
+    console.error('Error deleting evaluation:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getEvaluationsByParticipant,
-  createEvaluation
+  createEvaluation,
+  deleteEvaluation
 };

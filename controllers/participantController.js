@@ -1,6 +1,7 @@
 // controllers/participantController.js
 const Participant = require('../models/Participant');
 const { cloudinary } = require('../config/cloudinary');
+const { updateParticipantCheckInStatus, resetParticipantCheckInStatus } = require('../services/googleSheetsService');
 
 // @desc    Get all participants
 // @route   GET /api/participants
@@ -58,6 +59,18 @@ const checkInParticipant = async (req, res) => {
     const populatedParticipant = await Participant.findById(updatedParticipant._id)
       .populate('checkedInBy', 'name');
 
+    // Update Google Sheets if enabled in environment variables
+    if (process.env.GOOGLE_SHEETS_ENABLED === 'true') {
+      try {
+        console.log(`Updating Google Sheets for ${participant.name}`);
+        const sheetsResult = await updateParticipantCheckInStatus(participant.name, checkInStatus);
+        console.log('Google Sheets update result:', sheetsResult);
+      } catch (sheetsError) {
+        console.error('Error updating Google Sheets:', sheetsError);
+        // Continue even if Google Sheets update fails
+      }
+    }
+
     res.json(populatedParticipant);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -102,6 +115,18 @@ const resetCheckIn = async (req, res) => {
     participant.checkedInBy = null;
 
     const updatedParticipant = await participant.save();
+
+    // Update Google Sheets if enabled in environment variables
+    if (process.env.GOOGLE_SHEETS_ENABLED === 'true') {
+      try {
+        console.log(`Resetting Google Sheets check-in status for ${participant.name}`);
+        const sheetsResult = await resetParticipantCheckInStatus(participant.name);
+        console.log('Google Sheets reset result:', sheetsResult);
+      } catch (sheetsError) {
+        console.error('Error resetting Google Sheets:', sheetsError);
+        // Continue even if Google Sheets update fails
+      }
+    }
 
     res.json({
       success: true,
