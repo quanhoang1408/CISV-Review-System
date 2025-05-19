@@ -25,6 +25,7 @@ const participantRoutes = require('./routes/participantRoutes');
 const evaluationRoutes = require('./routes/evaluationRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const campAssignmentRoutes = require('./routes/campAssignmentRoutes');
+const googleSheetsRoutes = require('./routes/googleSheetsRoutes');
 
 const app = express();
 
@@ -58,6 +59,9 @@ app.use('/api/camp-assignments', campAssignmentRoutes);
 
 // Simplified upload routes - just use one path for all upload-related endpoints
 app.use('/api/upload-photo', uploadRoutes);
+
+// Google Sheets routes
+app.use('/api/sheets', googleSheetsRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
