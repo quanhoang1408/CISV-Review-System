@@ -3,6 +3,8 @@ const Participant = require('../models/Participant');
 const { cloudinary } = require('../config/cloudinary');
 const { updateParticipantCheckInStatus, resetParticipantCheckInStatus } = require('../services/googleSheetsService');
 
+const normalizeParticipantName = (name = '') => name.trim().replace(/\s+/g, ' ').toLowerCase();
+
 // @desc    Get all participants
 // @route   GET /api/participants
 // @access  Public
@@ -21,15 +23,70 @@ const getParticipants = async (req, res) => {
 // @access  Public
 const createParticipant = async (req, res) => {
   try {
-    const { name, type } = req.body;
+    const { name, names, namesText, type } = req.body;
+    const participantType = type || 'supporter';
+    const rawNames = Array.isArray(names)
+      ? names
+      : typeof namesText === 'string'
+        ? namesText.split(/\r?\n/)
+        : name
+          ? [name]
+          : [];
 
-    const participant = new Participant({
-      name,
-      type: type || 'supporter'
+    const cleanedNames = rawNames
+      .map((item) => (typeof item === 'string' ? item.trim().replace(/\s+/g, ' ') : ''))
+      .filter(Boolean);
+
+    if (cleanedNames.length === 0) {
+      return res.status(400).json({ message: 'Name is required' });
+    }
+
+    const existingParticipants = await Participant.find({}, 'name');
+    const existingNameSet = new Set(
+      existingParticipants.map((participant) => normalizeParticipantName(participant.name))
+    );
+    const requestNameSet = new Set();
+    const namesToCreate = [];
+    const skippedParticipants = [];
+
+    cleanedNames.forEach((participantName) => {
+      const normalizedName = normalizeParticipantName(participantName);
+
+      if (requestNameSet.has(normalizedName)) {
+        skippedParticipants.push({
+          name: participantName,
+          reason: 'Trung ten trong danh sach vua nhap'
+        });
+        return;
+      }
+
+      requestNameSet.add(normalizedName);
+
+      if (existingNameSet.has(normalizedName)) {
+        skippedParticipants.push({
+          name: participantName,
+          reason: 'Ten da ton tai trong he thong'
+        });
+        return;
+      }
+
+      namesToCreate.push({
+        name: participantName,
+        type: participantType
+      });
+      existingNameSet.add(normalizedName);
     });
 
-    const savedParticipant = await participant.save();
-    res.status(201).json(savedParticipant);
+    const createdParticipants = namesToCreate.length > 0
+      ? await Participant.insertMany(namesToCreate)
+      : [];
+
+    res.status(201).json({
+      success: true,
+      createdParticipants,
+      skippedParticipants,
+      message: `Da them ${createdParticipants.length} nguoi tham gia, bo qua ${skippedParticipants.length} ten`
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
