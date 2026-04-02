@@ -20,17 +20,13 @@ const uploadPhoto = async (req, res) => {
       folder: 'checkin-app',
       resource_type: 'auto',
       // Tối ưu hóa ảnh
-      quality: 'auto', // Tự động tối ưu chất lượng
-      fetch_format: 'auto', // Tự động chọn định dạng tốt nhất (WebP, AVIF, v.v.)
-      width: 800, // Giới hạn chiều rộng tối đa
-      height: 800, // Giới hạn chiều cao tối đa
-      crop: 'limit', // Chỉ thay đổi kích thước nếu ảnh lớn hơn giới hạn
-      eager: [
-        // Tạo phiên bản thumbnail để sử dụng trong danh sách
-        { width: 200, height: 200, crop: 'fill', gravity: 'face' }
-      ],
-      eager_async: true, // Xử lý các biến thể ảnh không đồng bộ
-      format: 'jpg' // Chuyển đổi tất cả ảnh sang jpg để đảm bảo tính tương thích
+      quality: 'auto',
+      fetch_format: 'auto',
+      width: 800,
+      height: 800,
+      crop: 'limit',
+      format: 'jpg',
+      timeout: 120000
     });
 
     console.log('Base64 upload successful:', uploadResponse.secure_url);
@@ -84,18 +80,13 @@ const uploadPhotoFile = async (req, res) => {
         {
           folder: 'checkin-app',
           resource_type: 'auto',
-          // Tối ưu hóa ảnh
-          quality: 'auto', // Tự động tối ưu chất lượng
-          fetch_format: 'auto', // Tự động chọn định dạng tốt nhất (WebP, AVIF, v.v.)
-          width: 800, // Giới hạn chiều rộng tối đa
-          height: 800, // Giới hạn chiều cao tối đa
-          crop: 'limit', // Chỉ thay đổi kích thước nếu ảnh lớn hơn giới hạn
-          eager: [
-            // Tạo phiên bản thumbnail để sử dụng trong danh sách
-            { width: 200, height: 200, crop: 'fill', gravity: 'face' }
-          ],
-          eager_async: true, // Xử lý các biến thể ảnh không đồng bộ
-          format: 'jpg' // Chuyển đổi tất cả ảnh sang jpg để đảm bảo tính tương thích
+          quality: 'auto',
+          fetch_format: 'auto',
+          width: 800,
+          height: 800,
+          crop: 'limit',
+          format: 'jpg',
+          timeout: 120000
         },
         (error, result) => {
           if (error) return reject(error);
