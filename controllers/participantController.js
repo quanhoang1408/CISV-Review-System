@@ -23,7 +23,7 @@ const getParticipants = async (req, res) => {
 // @access  Public
 const createParticipant = async (req, res) => {
   try {
-    const { name, names, namesText, type } = req.body;
+    const { name, names, namesText, type, dateOfBirth, email, facebookLink } = req.body;
     const participantType = type || 'supporter';
     const rawNames = Array.isArray(names)
       ? names
@@ -72,7 +72,10 @@ const createParticipant = async (req, res) => {
 
       namesToCreate.push({
         name: participantName,
-        type: participantType
+        type: participantType,
+        dateOfBirth: dateOfBirth || '',
+        email: email || '',
+        facebookLink: facebookLink || ''
       });
       existingNameSet.add(normalizedName);
     });
@@ -268,7 +271,7 @@ const deleteParticipant = async (req, res) => {
 // @access  Public
 const updateParticipant = async (req, res) => {
   try {
-    const { name, type } = req.body;
+    const { name, type, dateOfBirth, email, facebookLink } = req.body;
 
     const participant = await Participant.findById(req.params.id);
 
@@ -279,6 +282,9 @@ const updateParticipant = async (req, res) => {
     // Update fields
     if (name) participant.name = name;
     if (type) participant.type = type;
+    if (dateOfBirth !== undefined) participant.dateOfBirth = dateOfBirth;
+    if (email !== undefined) participant.email = email;
+    if (facebookLink !== undefined) participant.facebookLink = facebookLink;
 
     const updatedParticipant = await participant.save();
 

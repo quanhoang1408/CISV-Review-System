@@ -11,6 +11,18 @@ const participantSchema = new mongoose.Schema({
     enum: ['leader', 'supporter'],
     default: 'supporter'
   },
+  dateOfBirth: {
+    type: String,
+    default: ''
+  },
+  email: {
+    type: String,
+    default: ''
+  },
+  facebookLink: {
+    type: String,
+    default: ''
+  },
   checkInStatus: {
     type: Boolean,
     default: false

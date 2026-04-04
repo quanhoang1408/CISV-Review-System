@@ -65,10 +65,10 @@ async function updateParticipantCheckInStatus(participantName, checkInStatus) {
       console.log(`Found participant "${participantName}" at row ${rowIndex}, but it's outside the expected ranges`);
     }
 
-    // Update the check-in status in column I (checkbox)
+    // Update the check-in status in column H (Xác nhận nhận)
     const updateResponse = await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `'${sheetName}'!I${rowIndex}`,
+      range: `'${sheetName}'!H${rowIndex}`,
       valueInputOption: 'USER_ENTERED',
       resource: {
         values: [[checkInStatus ? 'TRUE' : 'FALSE']] // Use TRUE/FALSE for checkboxes
