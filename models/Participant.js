@@ -23,6 +23,10 @@ const participantSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  labels: {
+    type: [String],
+    default: []
+  },
   checkInStatus: {
     type: Boolean,
     default: false

@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   getParticipants,
   createParticipant,
+  bulkUpdateParticipantLabels,
   checkInParticipant,
   resetCheckIn,
   findParticipantByName,
@@ -13,6 +14,7 @@ const {
 
 router.get('/', getParticipants);
 router.post('/', createParticipant);
+router.post('/bulk-labels', bulkUpdateParticipantLabels);
 router.put('/:id/checkin', checkInParticipant);
 router.put('/:id/reset-checkin', resetCheckIn);
 router.get('/find-by-name', findParticipantByName);

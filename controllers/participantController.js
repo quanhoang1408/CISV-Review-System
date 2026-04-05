@@ -4,6 +4,28 @@ const { cloudinary } = require('../config/cloudinary');
 const { updateParticipantCheckInStatus, resetParticipantCheckInStatus } = require('../services/googleSheetsService');
 
 const normalizeParticipantName = (name = '') => name.trim().replace(/\s+/g, ' ').toLowerCase();
+const parseLabels = (labels, labelsText) => {
+  const rawLabels = Array.isArray(labels)
+    ? labels
+    : typeof labelsText === 'string'
+      ? labelsText.split(',')
+      : [];
+
+  const seen = new Set();
+
+  return rawLabels
+    .map((label) => (typeof label === 'string' ? label.trim() : ''))
+    .filter(Boolean)
+    .filter((label) => {
+      const normalizedLabel = label.toLowerCase();
+      if (seen.has(normalizedLabel)) {
+        return false;
+      }
+
+      seen.add(normalizedLabel);
+      return true;
+    });
+};
 
 // @desc    Get all participants
 // @route   GET /api/participants
@@ -23,8 +45,9 @@ const getParticipants = async (req, res) => {
 // @access  Public
 const createParticipant = async (req, res) => {
   try {
-    const { name, names, namesText, type, dateOfBirth, email, facebookLink } = req.body;
+    const { name, names, namesText, type, dateOfBirth, email, facebookLink, labels, labelsText } = req.body;
     const participantType = type || 'supporter';
+    const parsedLabels = parseLabels(labels, labelsText);
     const rawNames = Array.isArray(names)
       ? names
       : typeof namesText === 'string'
@@ -75,7 +98,8 @@ const createParticipant = async (req, res) => {
         type: participantType,
         dateOfBirth: dateOfBirth || '',
         email: email || '',
-        facebookLink: facebookLink || ''
+        facebookLink: facebookLink || '',
+        labels: parsedLabels
       });
       existingNameSet.add(normalizedName);
     });
@@ -89,6 +113,92 @@ const createParticipant = async (req, res) => {
       createdParticipants,
       skippedParticipants,
       message: `Da them ${createdParticipants.length} nguoi tham gia, bo qua ${skippedParticipants.length} ten`
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Bulk update participant labels by names
+// @route   POST /api/participants/bulk-labels
+// @access  Public
+const bulkUpdateParticipantLabels = async (req, res) => {
+  try {
+    const { label, names, namesText } = req.body;
+    const labelToApply = typeof label === 'string' ? label.trim() : '';
+    const rawNames = Array.isArray(names)
+      ? names
+      : typeof namesText === 'string'
+        ? namesText.split(/\r?\n/)
+        : [];
+
+    const cleanedNames = rawNames
+      .map((item) => (typeof item === 'string' ? item.trim().replace(/\s+/g, ' ') : ''))
+      .filter(Boolean);
+
+    if (!labelToApply) {
+      return res.status(400).json({ message: 'Label is required' });
+    }
+
+    if (cleanedNames.length === 0) {
+      return res.status(400).json({ message: 'At least one participant name is required' });
+    }
+
+    const participants = await Participant.find();
+    const participantMap = new Map(
+      participants.map((participant) => [normalizeParticipantName(participant.name), participant])
+    );
+    const requestNameSet = new Set();
+    const updatedParticipants = [];
+    const skippedParticipants = [];
+
+    for (const participantName of cleanedNames) {
+      const normalizedName = normalizeParticipantName(participantName);
+
+      if (requestNameSet.has(normalizedName)) {
+        skippedParticipants.push({
+          name: participantName,
+          reason: 'Trung ten trong danh sach vua nhap'
+        });
+        continue;
+      }
+
+      requestNameSet.add(normalizedName);
+
+      const participant = participantMap.get(normalizedName);
+
+      if (!participant) {
+        skippedParticipants.push({
+          name: participantName,
+          reason: 'Khong tim thay nguoi tham gia trong he thong'
+        });
+        continue;
+      }
+
+      const currentLabels = parseLabels(participant.labels, undefined);
+      const hasLabel = currentLabels.some(
+        (existingLabel) => existingLabel.toLowerCase() === labelToApply.toLowerCase()
+      );
+
+      if (hasLabel) {
+        skippedParticipants.push({
+          name: participant.name,
+          reason: 'Nguoi nay da co label nay'
+        });
+        continue;
+      }
+
+      participant.labels = parseLabels([...currentLabels, labelToApply], undefined);
+      const updatedParticipant = await participant.save();
+      updatedParticipants.push(updatedParticipant);
+    }
+
+    res.json({
+      success: true,
+      updatedParticipants,
+      skippedParticipants,
+      label: labelToApply,
+      message: `Da cap nhat label cho ${updatedParticipants.length} nguoi, bo qua ${skippedParticipants.length} ten`
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -271,7 +381,7 @@ const deleteParticipant = async (req, res) => {
 // @access  Public
 const updateParticipant = async (req, res) => {
   try {
-    const { name, type, dateOfBirth, email, facebookLink } = req.body;
+    const { name, type, dateOfBirth, email, facebookLink, labels, labelsText } = req.body;
 
     const participant = await Participant.findById(req.params.id);
 
@@ -285,6 +395,9 @@ const updateParticipant = async (req, res) => {
     if (dateOfBirth !== undefined) participant.dateOfBirth = dateOfBirth;
     if (email !== undefined) participant.email = email;
     if (facebookLink !== undefined) participant.facebookLink = facebookLink;
+    if (labels !== undefined || labelsText !== undefined) {
+      participant.labels = parseLabels(labels, labelsText);
+    }
 
     const updatedParticipant = await participant.save();
 
@@ -297,6 +410,7 @@ const updateParticipant = async (req, res) => {
 module.exports = {
   getParticipants,
   createParticipant,
+  bulkUpdateParticipantLabels,
   checkInParticipant,
   resetCheckIn,
   findParticipantByName,
