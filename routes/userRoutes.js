@@ -7,6 +7,7 @@ const {
   updateUser,
   deleteUser,
   authUser,
+  changePassword,
   deleteParticipantPhoto
 } = require('../controllers/userController');
 
@@ -14,6 +15,7 @@ const {
 router.get('/', getUsers);
 router.post('/', createUser);
 router.put('/:id', updateUser);
+router.put('/:id/change-password', changePassword);
 router.delete('/:id', deleteUser);
 
 // Route xác thực

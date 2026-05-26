@@ -22,6 +22,10 @@ const createUser = async (req, res) => {
   try {
     const { name, role, password, isSuperAdmin } = req.body;
 
+    if (password && !/^\d{4}$/.test(password)) {
+      return res.status(400).json({ message: 'Mã PIN phải gồm 4 chữ số' });
+    }
+
     const user = new User({
       name,
       role: role || 'admin',
@@ -53,6 +57,10 @@ const updateUser = async (req, res) => {
   try {
     const { name, role, password, isSuperAdmin } = req.body;
 
+    if (password !== undefined && password !== null && password !== '' && !/^\d{4}$/.test(password)) {
+      return res.status(400).json({ message: 'Mã PIN phải gồm 4 chữ số' });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -60,7 +68,7 @@ const updateUser = async (req, res) => {
 
     if (name) user.name = name;
     if (role) user.role = role;
-    if (password !== undefined) user.password = password;
+    if (password !== undefined) user.password = password || null;
     if (isSuperAdmin !== undefined) user.isSuperAdmin = isSuperAdmin;
 
     const updatedUser = await user.save();
@@ -105,6 +113,10 @@ const authUser = async (req, res) => {
     const { name, password } = req.body;
     console.log('Auth request received:', { name, password });
 
+    if (!password || typeof password !== 'string' || password.trim() === '') {
+      return res.status(400).json({ message: 'Vui lòng nhập mã PIN' });
+    }
+
     const user = await User.findOne({ name });
     if (!user) {
       console.log('User not found:', name);
@@ -118,20 +130,11 @@ const authUser = async (req, res) => {
       password: user.password
     });
 
-    // Nếu user không có password hoặc không phải superadmin, cho phép đăng nhập không cần password
-    if (!user.password || !user.isSuperAdmin) {
-      console.log('User does not need password verification');
-      // Không trả về password trong response
-      const userResponse = {
-        _id: user._id,
-        name: user.name,
-        role: user.role,
-        isSuperAdmin: user.isSuperAdmin
-      };
-      return res.json(userResponse);
+    if (!user.password) {
+      console.log('User has no PIN set');
+      return res.status(401).json({ message: 'Tài khoản chưa có mã PIN' });
     }
 
-    // Kiểm tra password nếu user là superadmin
     console.log('Comparing passwords:', {
       provided: password,
       stored: user.password,
@@ -144,7 +147,6 @@ const authUser = async (req, res) => {
     }
 
     console.log('Authentication successful');
-    // Không trả về password trong response
     const userResponse = {
       _id: user._id,
       name: user.name,
@@ -155,6 +157,39 @@ const authUser = async (req, res) => {
     res.json(userResponse);
   } catch (error) {
     console.error('Auth error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Change user PIN
+// @route   PUT /api/users/:id/change-password
+// @access  Public
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!newPassword || !/^\d{4}$/.test(newPassword)) {
+      return res.status(400).json({ message: 'Mã PIN mới phải gồm 4 chữ số' });
+    }
+
+    if (user.password) {
+      if (!oldPassword || user.password !== oldPassword) {
+        return res.status(401).json({ message: 'Mã PIN cũ không đúng' });
+      }
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: 'Đổi mã PIN thành công' });
+  } catch (error) {
+    console.error('Change PIN error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -199,5 +234,6 @@ module.exports = {
   updateUser,
   deleteUser,
   authUser,
+  changePassword,
   deleteParticipantPhoto
 };
